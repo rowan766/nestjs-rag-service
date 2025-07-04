@@ -1,0 +1,326 @@
+// 修复后的兼容 Prisma Schema
+// 文件位置：prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// 现有的博客系统表（保持现有结构）
+// ================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String?  @unique
+  password  String?
+  avatar    String?
+  role      UserRole @default(user)
+  
+  // 时间戳 - 设为可选并添加默认值以兼容现有数据
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  
+  // 现有关系
+  articles     Article[]
+  comments     Comment[]
+  
+  // 新增 RAG 关系
+  ragDocuments    RagDocument[]
+  ragChatSessions RagChatSession[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  admin
+  user
+  
+  @@map("users_role_enum")
+}
+
+model Article {
+  id         String        @id @default(cuid())
+  title      String
+  content    String?
+  slug       String?
+  status     ArticleStatus @default(draft)
+  authorId   String
+  categoryId String?
+  
+  // 时间戳 - 设为可选并添加默认值
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  
+  author   User      @relation(fields: [authorId], references: [id])
+  category Category? @relation(fields: [categoryId], references: [id])
+  comments Comment[]
+  tags     ArticleTag[]
+  
+  @@map("articles")
+}
+
+enum ArticleStatus {
+  draft
+  published
+  archived
+  
+  @@map("articles_status_enum")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  
+  // 时间戳 - 设为可选并添加默认值
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  
+  articles Article[]
+  
+  @@map("categories")
+}
+
+model Tag {
+  id          String @id @default(cuid())
+  name        String @unique
+  slug        String @unique
+  description String?
+  
+  // 时间戳 - 设为可选并添加默认值
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  
+  articles ArticleTag[]
+  
+  @@map("tags")
+}
+
+model ArticleTag {
+  articlesId String
+  tagsId     String
+  
+  article Article @relation(fields: [articlesId], references: [id])
+  tag     Tag     @relation(fields: [tagsId], references: [id])
+  
+  @@id([articlesId, tagsId])
+  @@map("articles_tags_tags")
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  content   String
+  status    CommentStatus @default(pending)
+  authorId  String
+  articleId String
+  
+  // 时间戳 - 设为可选并添加默认值
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  
+  author  User    @relation(fields: [authorId], references: [id])
+  article Article @relation(fields: [articleId], references: [id])
+  
+  @@map("comments")
+}
+
+enum CommentStatus {
+  pending
+  approved
+  rejected
+  
+  @@map("comments_status_enum")
+}
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String?
+  excerpt     String?
+  published   Boolean  @default(false)
+  publishedAt DateTime?
+  
+  // 时间戳 - 设为可选并添加默认值
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  
+  @@map("blog_posts")
+}
+
+// ================================
+// 新增的 RAG 系统表
+// ================================
+
+model RagDocument {
+  id          String           @id @default(cuid())
+  title       String
+  filename    String
+  originalName String          @map("original_name")
+  mimeType    String           @map("mime_type")
+  size        Int
+  path        String
+  
+  // 文档元数据
+  content     String?          // 提取的文本内容
+  summary     String?          // AI 生成的摘要
+  language    String?          // 检测到的语言
+  pageCount   Int?             @map("page_count")
+  wordCount   Int?             @map("word_count")
+  
+  // 处理状态
+  status      RagDocumentStatus @default(UPLOADED)
+  errorMessage String?          @map("error_message")
+  
+  // 时间戳
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  processedAt DateTime?        @map("processed_at")
+  
+  // 关系
+  userId      String           @map("user_id")
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chunks      RagDocumentChunk[]
+  
+  @@map("rag_documents")
+}
+
+enum RagDocumentStatus {
+  UPLOADED     // 已上传
+  PROCESSING   // 处理中
+  PROCESSED    // 已处理
+  FAILED       // 处理失败
+  
+  @@map("rag_document_status")
+}
+
+model RagDocumentChunk {
+  id        String   @id @default(cuid())
+  content   String   // 分块文本内容
+  metadata  Json?    // 分块元数据 (页码、段落等)
+  
+  // 向量相关 - 使用 String 类型，运行时处理为 vector
+  embedding String?  // pgvector 向量字段的字符串表示
+  tokenCount Int?    @map("token_count")
+  
+  // 位置信息
+  chunkIndex Int     @map("chunk_index")  // 在文档中的序号
+  startChar  Int?    @map("start_char")   // 起始字符位置
+  endChar    Int?    @map("end_char")     // 结束字符位置
+  
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // 关系
+  documentId String     @map("document_id")
+  document   RagDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  @@map("rag_document_chunks")
+  @@index([documentId])
+}
+
+model RagChatSession {
+  id          String   @id @default(cuid())
+  title       String?  // 会话标题
+  description String?  // 会话描述
+  
+  // 配置
+  systemPrompt String? @map("system_prompt") // 系统提示词
+  model        String  @default("gpt-3.5-turbo") // 使用的模型
+  temperature  Float   @default(0.7) // 温度参数
+  maxTokens    Int?    @map("max_tokens") // 最大令牌数
+  
+  // 状态
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  // 时间戳
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // 关系
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    RagChatMessage[]
+  
+  @@map("rag_chat_sessions")
+}
+
+model RagChatMessage {
+  id        String      @id @default(cuid())
+  content   String
+  role      RagMessageRole
+  
+  // RAG 相关
+  context   Json?       // 检索到的上下文信息
+  sources   String[]    // 引用的文档源
+  
+  // 元数据
+  metadata  Json?       // 额外元数据 (token 使用量等)
+  tokenCount Int?       @map("token_count")
+  
+  // 时间戳
+  createdAt DateTime    @default(now()) @map("created_at")
+  
+  // 关系
+  sessionId String        @map("session_id")
+  session   RagChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@map("rag_chat_messages")
+  @@index([sessionId, createdAt])
+}
+
+enum RagMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  
+  @@map("rag_message_role")
+}
+
+// ================================
+// 系统配置和统计表
+// ================================
+
+model RagSystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  
+  // 描述
+  description String?
+  category    String?
+  
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@map("rag_system_configs")
+}
+
+model RagUsageStats {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  
+  // 统计数据
+  totalQueries     Int @default(0) @map("total_queries")
+  totalTokens      Int @default(0) @map("total_tokens")
+  totalDocuments   Int @default(0) @map("total_documents")
+  activeUsers      Int @default(0) @map("active_users")
+  
+  // 费用统计
+  estimatedCost    Float @default(0) @map("estimated_cost")
+  
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("rag_usage_stats")
+  @@unique([date])
+}
