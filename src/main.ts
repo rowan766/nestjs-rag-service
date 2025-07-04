@@ -9,7 +9,7 @@ async function bootstrap() {
   
   // 获取配置服务
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('app.port') || 3000;
+  const port = configService.get<number>('app.port') || 3002;
   const corsOrigin = configService.get<string[]>('app.corsOrigin') || ['http://localhost:3000'];
 
   // 启用验证管道
