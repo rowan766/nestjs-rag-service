@@ -16,7 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes,ApiBody } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
-import { DocumentsService } from './documents.service';
+import { DocumentsService} from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { QueryDocumentsDto } from './dto/query-documents.dto';
@@ -89,5 +89,11 @@ export class DocumentsController {
   @ApiOperation({ summary: '删除文档' })
   remove(@Param('id') id: string) {
     return this.documentsService.remove(id);
+  }
+
+  @Post(':id/reprocess')
+  @ApiOperation({ summary: '重新处理文档分块' })
+  reprocessDocument(@Param('id') id: string) {
+    return this.documentsService.reprocessDocument(id);
   }
 }

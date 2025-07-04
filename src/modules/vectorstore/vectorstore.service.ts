@@ -22,7 +22,12 @@ export class VectorstoreService {
   async similaritySearch(searchDto: VectorSearchDto): Promise<VectorSearchResultDto[]> {
     try {
       // 构建查询条件
-      const whereConditions: any = {};
+      const whereConditions: any = {
+        content: {
+          contains: searchDto.query,
+          mode: 'insensitive',
+        }
+      };
       if (searchDto.documentId) {
         whereConditions.documentId = searchDto.documentId;
       }
@@ -31,16 +36,9 @@ export class VectorstoreService {
           userId: searchDto.userId,
         };
       }
-
-      // 执行文本搜索（简化版本，暂时不用向量搜索）
+    // 执行文本搜索
       const chunks = await this.prisma.ragDocumentChunk.findMany({
-        where: {
-          ...whereConditions,
-          content: {
-            contains: searchDto.query,
-            mode: 'insensitive',
-          },
-        },
+        where: whereConditions,
         include: {
           document: {
             select: {
@@ -55,7 +53,6 @@ export class VectorstoreService {
           createdAt: 'desc',
         },
       });
-
       // 计算相似度（简化版本）
       const results: VectorSearchResultDto[] = chunks.map((chunk, index) => ({
         id: chunk.id,

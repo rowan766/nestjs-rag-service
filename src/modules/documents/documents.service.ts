@@ -178,6 +178,33 @@ export class DocumentsService {
     });
   }
 
+  async reprocessDocument(documentId: string): Promise<void> {
+    const document = await this.prisma.ragDocument.findUnique({
+      where: { id: documentId },
+      include: {
+        _count: {
+          select: { chunks: true },
+        },
+      },
+    });
+
+    if (!document) {
+      throw new NotFoundException(`文档 ${documentId} 不存在`);
+    }
+
+    if (!document.content) {
+      throw new BadRequestException('文档内容为空，无法处理分块');
+    }
+
+    // 👈 智能判断：只有没有分块时才创建
+    if (document._count.chunks === 0) {
+      await this.createSimpleChunks(documentId, document.content);
+      this.logger.log(`为文档创建分块: ${documentId}`);
+    } else {
+      this.logger.log(`文档已有 ${document._count.chunks} 个分块，跳过处理`);
+    }
+  }
+
   private async processDocumentAsync(documentId: string): Promise<void> {
     try {
       // 更新状态为处理中
@@ -258,7 +285,7 @@ export class DocumentsService {
 
   private async createSimpleChunks(documentId: string, content: string): Promise<void> {
     const chunkSize = 1000;
-    const chunks: string[] = [];;
+    const chunks: string[] = [];
     
     for (let i = 0; i < content.length; i += chunkSize) {
       chunks.push(content.substring(i, i + chunkSize));
