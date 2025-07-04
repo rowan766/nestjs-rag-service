@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { DocumentsModule } from './modules/documents/documents.module';
 
 // 配置导入
 import appConfig from './config/app.config';
@@ -20,6 +21,7 @@ import jwtConfig from './config/jwt.config';
       envFilePath: '.env',
     }),
     PrismaModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [
