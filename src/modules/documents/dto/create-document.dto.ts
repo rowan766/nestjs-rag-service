@@ -11,4 +11,11 @@ export class CreateDocumentDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+    @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: '上传的文件',
+  })
+  file: any;
 }

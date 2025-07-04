@@ -20,8 +20,9 @@ export const documentFileFilter = (req: any, file: any, callback: any) => {
 };
 
 export const editFileName = (req: any, file: any, callback: any) => {
-  const name = file.originalname.split('.')[0];
-  const fileExtName = extname(file.originalname);
+  const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+  const name = originalName.split('.')[0];
+  const fileExtName = extname(originalName);
   const randomName = uuidv4();
   callback(null, `${name}-${randomName}${fileExtName}`);
 };

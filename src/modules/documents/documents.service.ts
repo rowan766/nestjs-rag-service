@@ -10,6 +10,8 @@ import { PaginatedResponseDto } from '../../common/dto/pagination.dto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
+import { EmbeddingsService } from '../embeddings/embeddings.service';
+
 @Injectable()
 export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
@@ -19,6 +21,7 @@ export class DocumentsService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly documentProcessor: DocumentProcessor,
+    private readonly embeddingsService: EmbeddingsService
   ) {
     this.documentsPath = this.configService.get<string>('langchain.documentsPath')||'./uploads/documents';
   }
@@ -28,7 +31,23 @@ export class DocumentsService {
     file: Express.Multer.File,
     userId: string,
   ): Promise<DocumentResponseDto> {
+
+  console.log('=== Debug Info ===');
+  console.log('createDocumentDto:', createDocumentDto);
+  console.log('file:', file);
+  console.log('userId:', userId);
+  console.log('=================');
     try {
+
+      await this.prisma.user.upsert({
+        where: { id: userId },
+        create: {
+          id: userId,
+          email: 'temp@example.com',
+          role: 'user',
+        },
+        update: {},
+      });
       // 创建文档记录
       const document = await this.prisma.ragDocument.create({
         data: {
@@ -54,6 +73,8 @@ export class DocumentsService {
   }
 
   async findAll(query: QueryDocumentsDto): Promise<PaginatedResponseDto<DocumentResponseDto>> {
+    console.log('=== Query Debug ===');
+    console.log('query:', query);
     const { page = 1, limit = 10, search, status, userId } = query;
     const skip = (page - 1) * limit;
 
@@ -196,7 +217,7 @@ export class DocumentsService {
           processedAt: new Date(),
         },
       });
-
+      // await this.embeddingsService.processDocumentEmbeddings(documentId);
       this.logger.log(`文档处理完成: ${documentId}`);
     } catch (error) {
       this.logger.error(`文档处理失败: ${documentId}`, error.stack);

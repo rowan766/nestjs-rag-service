@@ -7,8 +7,10 @@ import {
   Param,
   Delete,
   Query,
+  UsePipes,
   UseInterceptors,
   UploadedFile,
+  ValidationPipe,
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -24,10 +26,10 @@ import { documentFileFilter, editFileName } from '../../utils/file-upload.util';
 @Controller('documents')
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
-
   @Post()
   @ApiOperation({ summary: '上传文档' })
   @ApiConsumes('multipart/form-data')
+  @UsePipes(new ValidationPipe({ transform: true, skipMissingProperties: true }))
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -43,6 +45,10 @@ export class DocumentsController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     // 临时使用固定用户ID，后续添加认证后从JWT获取
+    console.log('=== Controller Debug ===');
+    console.log('createDocumentDto:', createDocumentDto);
+    console.log('file:', file);
+    console.log('========================');
     const userId = 'temp-user-id';
     return this.documentsService.create(createDocumentDto, file, userId);
   }
