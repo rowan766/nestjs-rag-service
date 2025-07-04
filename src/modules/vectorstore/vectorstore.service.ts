@@ -21,13 +21,27 @@ export class VectorstoreService {
 
   async similaritySearch(searchDto: VectorSearchDto): Promise<VectorSearchResultDto[]> {
     try {
+      console.log('=== VectorStore Debug ===');
+      console.log('Search DTO:', searchDto);
       // 构建查询条件
-      const whereConditions: any = {
-        content: {
-          contains: searchDto.query,
-          mode: 'insensitive',
-        }
-      };
+        //优化搜索：将问句分解为关键词
+        const keywords = searchDto.query
+          .replace(/[？？！。，、]/g, '') // 移除标点
+          .split(/\s+/)
+          .filter(word => word.length > 1);
+        
+        console.log('Keywords:', keywords);
+        
+        // 构建 OR 查询条件，搜索包含任一关键词的分块
+        const whereConditions: any = {
+          OR: keywords.map(keyword => ({
+            content: {
+              contains: keyword,
+              mode: 'insensitive',
+            }
+          }))
+        };
+      console.log('Where conditions:', whereConditions);
       if (searchDto.documentId) {
         whereConditions.documentId = searchDto.documentId;
       }
@@ -36,6 +50,7 @@ export class VectorstoreService {
           userId: searchDto.userId,
         };
       }
+       console.log('Final where conditions:', whereConditions);
     // 执行文本搜索
       const chunks = await this.prisma.ragDocumentChunk.findMany({
         where: whereConditions,
@@ -53,6 +68,11 @@ export class VectorstoreService {
           createdAt: 'desc',
         },
       });
+      console.log('Found chunks:', chunks.length);
+      if (chunks.length > 0) {
+        console.log('First chunk preview:', chunks[0].content.substring(0, 100));
+      }
+      console.log('========================');
       // 计算相似度（简化版本）
       const results: VectorSearchResultDto[] = chunks.map((chunk, index) => ({
         id: chunk.id,

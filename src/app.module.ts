@@ -8,6 +8,7 @@ import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters/http-
 import { DocumentsModule } from './modules/documents/documents.module';
 import { VectorstoreModule } from './modules/vectorstore/vectorstore.module';
 import { RagModule } from './modules/rag/rag.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 // 配置导入
 import appConfig from './config/app.config';
@@ -26,6 +27,7 @@ import jwtConfig from './config/jwt.config';
     DocumentsModule,
     VectorstoreModule,
     RagModule,
+    ChatModule
   ],
   controllers: [AppController],
   providers: [
