@@ -217,6 +217,7 @@ export class DocumentsService {
           processedAt: new Date(),
         },
       });
+      await this.createSimpleChunks(documentId, extractResult.content);
       // await this.embeddingsService.processDocumentEmbeddings(documentId);
       this.logger.log(`文档处理完成: ${documentId}`);
     } catch (error) {
@@ -253,5 +254,28 @@ export class DocumentsService {
       processedAt: document.processedAt,
       userId: document.userId,
     };
+  }
+
+  private async createSimpleChunks(documentId: string, content: string): Promise<void> {
+    const chunkSize = 1000;
+    const chunks: string[] = [];;
+    
+    for (let i = 0; i < content.length; i += chunkSize) {
+      chunks.push(content.substring(i, i + chunkSize));
+    }
+    
+    for (let i = 0; i < chunks.length; i++) {
+      await this.prisma.ragDocumentChunk.create({
+        data: {
+          content: chunks[i],
+          chunkIndex: i,
+          startChar: i * chunkSize,
+          endChar: Math.min((i + 1) * chunkSize, content.length),
+          documentId,
+        },
+      });
+    }
+    
+    this.logger.log(`创建了 ${chunks.length} 个文档分块`);
   }
 }

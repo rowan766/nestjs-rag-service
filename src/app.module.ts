@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { HttpExceptionFilter, AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { VectorstoreModule } from './modules/vectorstore/vectorstore.module';
 
 // 配置导入
 import appConfig from './config/app.config';
@@ -22,6 +23,7 @@ import jwtConfig from './config/jwt.config';
     }),
     PrismaModule,
     DocumentsModule,
+    VectorstoreModule,
   ],
   controllers: [AppController],
   providers: [

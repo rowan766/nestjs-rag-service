@@ -14,7 +14,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiConsumes,ApiBody } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
@@ -29,14 +29,28 @@ export class DocumentsController {
   @Post()
   @ApiOperation({ summary: '上传文档' })
   @ApiConsumes('multipart/form-data')
-  @UsePipes(new ValidationPipe({ transform: true, skipMissingProperties: true }))
+  @ApiBody({
+  schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: '文档标题' },
+        description: { type: 'string', description: '文档描述' },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '上传的文件',
+        },
+      },
+      required: ['title', 'file'],
+    },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
         destination: './uploads/documents',
         filename: editFileName,
       }),
-      fileFilter: documentFileFilter,
+      // fileFilter: documentFileFilter,
       limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
     }),
   )
