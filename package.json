@@ -23,7 +23,8 @@
     "db:studio": "yarn prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
     "db:reset": "yarn prisma migrate reset",
-    "prebuild": "rimraf dist"
+    "prebuild": "rimraf dist",
+     "seed:test": "ts-node src/scripts/seed-test-data.ts"
   },
   "dependencies": {
     "@langchain/community": "^0.3.48",
